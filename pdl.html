@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoadGuard — Pothole Detection Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #111118;
+  --bg3: #17171f;
+  --amber: #f0a500;
+  --amber2: #ffc740;
+  --amber-dim: rgba(240,165,0,0.12);
+  --green: #1daa75;
+  --red: #e24b4a;
+  --text: #f0ede8;
+  --muted: rgba(240,237,232,0.5);
+  --faint: rgba(240,237,232,0.12);
+  --border: rgba(240,237,232,0.08);
+  --radius: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+/* NOISE OVERLAY */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: 0.4;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 5vw; height: 64px;
+  background: rgba(10,10,15,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--amber); display: flex; align-items: center; justify-content: center;
+}
+.nav-logo-text { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); }
+.nav-links { display: flex; gap: 32px; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; cursor: pointer; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  background: var(--amber); color: #0a0a0f; border: none;
+  padding: 8px 20px; border-radius: 24px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: background .2s, transform .15s;
+}
+.nav-cta:hover { background: var(--amber2); transform: translateY(-1px); }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 120px 5vw 80px;
+  position: relative; overflow: hidden; text-align: center;
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(240,165,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,165,0,0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+}
+.hero-glow {
+  position: absolute;
+  width: 600px; height: 300px;
+  background: radial-gradient(ellipse, rgba(240,165,0,0.12) 0%, transparent 70%);
+  top: 20%; left: 50%; transform: translateX(-50%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--amber-dim); border: 1px solid rgba(240,165,0,0.3);
+  border-radius: 24px; padding: 6px 16px; font-size: 13px; color: var(--amber);
+  margin-bottom: 28px; animation: fadeUp .6s ease both;
+}
+.hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(40px, 7vw, 84px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  animation: fadeUp .7s .1s ease both;
+}
+h1 .accent { color: var(--amber); position: relative; }
+h1 .accent::after {
+  content: '';
+  position: absolute; bottom: -4px; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--amber), transparent);
+  border-radius: 2px;
+}
+.hero-sub {
+  max-width: 540px; margin: 20px auto 0;
+  color: var(--muted); font-size: clamp(15px, 2vw, 17px); font-weight: 300;
+  animation: fadeUp .7s .2s ease both;
+}
+.hero-actions {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  margin-top: 36px; animation: fadeUp .7s .3s ease both;
+}
+.btn-primary {
+  background: var(--amber); color: #0a0a0f; border: none;
+  padding: 14px 32px; border-radius: 48px;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary:hover { background: var(--amber2); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(240,165,0,0.25); }
+.btn-ghost {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border); padding: 14px 32px; border-radius: 48px;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 400;
+  cursor: pointer; transition: all .2s;
+}
+.btn-ghost:hover { border-color: var(--amber); color: var(--amber); }
+
+.hero-stats {
+  display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+  margin-top: 64px; padding-top: 40px;
+  border-top: 1px solid var(--border);
+  animation: fadeUp .7s .4s ease both;
+}
+.hero-stat { text-align: center; }
+.hero-stat-val {
+  font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 700; color: var(--amber);
+}
+.hero-stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* SECTIONS */
+section { padding: 100px 5vw; }
+.section-label {
+  font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700; letter-spacing: -1px; margin-bottom: 16px;
+}
+.section-sub { color: var(--muted); font-size: 16px; max-width: 520px; font-weight: 300; }
+
+/* HOW IT WORKS */
+.how-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2px; margin-top: 60px; background: var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+.how-card {
+  background: var(--bg2); padding: 36px 28px;
+  transition: background .2s;
+}
+.how-card:hover { background: var(--bg3); }
+.how-num {
+  font-family: 'Syne', sans-serif; font-size: 48px; font-weight: 800;
+  color: var(--amber-dim); line-height: 1; margin-bottom: 16px;
+  -webkit-text-stroke: 1px rgba(240,165,0,0.3);
+}
+.how-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.how-desc { color: var(--muted); font-size: 14px; line-height: 1.65; }
+.how-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--amber-dim); border: 1px solid rgba(240,165,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px; font-size: 18px;
+}
+
+/* FEATURES */
+.features-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.features-layout.flip { direction: rtl; }
+.features-layout.flip > * { direction: ltr; }
+.features-visual {
+  aspect-ratio: 4/3; border-radius: var(--radius);
+  background: var(--bg3); border: 1px solid var(--border);
+  overflow: hidden; position: relative;
+}
+.feature-list { display: flex; flex-direction: column; gap: 20px; margin-top: 32px; }
+.feature-item { display: flex; gap: 14px; }
+.feature-icon-wrap {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  background: var(--amber-dim); border: 1px solid rgba(240,165,0,0.2);
+  display: flex; align-items: center; justify-content: center; font-size: 15px; margin-top: 2px;
+}
+.feature-item-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+.feature-item-desc { color: var(--muted); font-size: 14px; }
+
+/* ROAD SCORE VISUAL */
+.score-demo {
+  padding: 28px; display: flex; flex-direction: column; gap: 16px; height: 100%;
+  justify-content: center;
+}
+.score-ring-wrap { display: flex; align-items: center; gap: 20px; }
+.score-ring {
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 3px solid var(--border); position: relative; flex-shrink: 0;
+  background: conic-gradient(var(--amber) 0% 62%, #e24b4a 62% 100%);
+}
+.score-ring-inner {
+  position: absolute; inset: 6px; border-radius: 50%; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700;
+}
+.score-info-label { font-size: 12px; color: var(--muted); }
+.score-info-val { font-size: 22px; font-weight: 600; }
+.score-bar-row { display: flex; flex-direction: column; gap: 8px; }
+.score-bar-item { display: flex; align-items: center; gap: 10px; }
+.score-bar-label { font-size: 12px; color: var(--muted); width: 70px; flex-shrink: 0; }
+.score-bar-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 3px; }
+.score-bar-num { font-size: 11px; font-weight: 500; width: 24px; text-align: right; }
+
+/* MAP VISUAL */
+.map-demo { position: relative; height: 100%; min-height: 260px; overflow: hidden; }
+.map-tiles {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-color: #0d1a12;
+}
+.map-road-h { position: absolute; left: 0; right: 0; background: #1e2a1e; }
+.map-road-v { position: absolute; top: 0; bottom: 0; background: #1e2a1e; }
+.map-pin { position: absolute; border-radius: 50%; border: 2px solid #0d1a12; transition: transform .2s; }
+.map-pin:hover { transform: scale(1.5) !important; }
+.map-tooltip {
+  position: absolute; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; font-size: 11px; white-space: nowrap;
+  pointer-events: none; z-index: 10;
+}
+
+/* LEADERBOARD */
+.lb-wrap { max-width: 560px; margin: 60px auto 0; }
+.lb-row-demo {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px; background: var(--bg2);
+  transition: transform .2s, border-color .2s;
+}
+.lb-row-demo:hover { transform: translateX(4px); border-color: rgba(240,165,0,0.3); }
+.lb-row-demo.gold { border-color: rgba(240,165,0,0.5); background: rgba(240,165,0,0.05); }
+.lb-rank-demo { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; width: 28px; }
+.lb-av-demo {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; flex-shrink: 0;
+}
+.lb-name-demo { font-size: 15px; font-weight: 500; }
+.lb-city-demo { font-size: 12px; color: var(--muted); }
+.lb-pts-demo { margin-left: auto; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--amber); }
+.badge-demo { font-size: 11px; background: var(--amber-dim); color: var(--amber); padding: 2px 8px; border-radius: 10px; }
+
+/* TECH STACK */
+.stack-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 48px; }
+.stack-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; text-align: center; transition: all .2s;
+}
+.stack-card:hover { border-color: var(--amber); background: var(--amber-dim); }
+.stack-icon { font-size: 28px; margin-bottom: 10px; }
+.stack-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.stack-role { font-size: 11px; color: var(--muted); }
+
+/* CTA */
+.cta-section {
+  margin: 0 5vw 80px;
+  background: linear-gradient(135deg, #1a1200, #0f1800);
+  border: 1px solid rgba(240,165,0,0.2);
+  border-radius: 24px; padding: 72px 5vw;
+  text-align: center; position: relative; overflow: hidden;
+}
+.cta-glow {
+  position: absolute; width: 400px; height: 200px;
+  background: radial-gradient(ellipse, rgba(240,165,0,0.15) 0%, transparent 70%);
+  top: 0; left: 50%; transform: translateX(-50%); pointer-events: none;
+}
+.cta-section h2 { font-family: 'Syne', sans-serif; font-size: clamp(28px,4vw,48px); font-weight: 800; margin-bottom: 12px; }
+.cta-section p { color: var(--muted); font-size: 16px; margin-bottom: 32px; }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border); padding: 32px 5vw;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+}
+footer p { color: var(--muted); font-size: 13px; }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color .2s; }
+.footer-links a:hover { color: var(--amber); }
+
+/* DETECTION PREVIEW */
+.detect-demo {
+  height: 100%; min-height: 280px; position: relative; overflow: hidden;
+  background: #050a08; display: flex; align-items: center; justify-content: center;
+}
+.road-surface {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(180deg, #111 0px, #111 40px, #0d0d0d 40px, #0d0d0d 80px);
+}
+.lane-mark {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 4px; background: rgba(255,255,255,0.15); border-radius: 2px;
+}
+.bbox-demo {
+  position: absolute; border: 2px solid; border-radius: 4px;
+  animation: blink 3s infinite;
+}
+.bbox-lab {
+  position: absolute; top: -22px; left: -1px; font-size: 10px; font-weight: 600;
+  padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+}
+@keyframes blink { 0%,90%,100%{opacity:1} 95%{opacity:.4} }
+.detect-badge {
+  position: absolute; bottom: 12px; left: 12px;
+  background: rgba(0,0,0,0.8); border: 1px solid rgba(240,165,0,0.4);
+  border-radius: 6px; padding: 6px 12px; font-size: 11px; color: var(--amber);
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(240,165,0,0.3); border-radius: 3px; }
+
+@media (max-width: 768px) {
+  .features-layout { grid-template-columns: 1fr; }
+  .features-layout.flip { direction: ltr; }
+  .nav-links { display: none; }
+}
+
+/* SCROLL REVEAL */
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <rect x="7" y="1" width="4" height="16" rx="1.5" fill="#0a0a0f"/>
+        <rect x="2" y="5" width="2" height="3" rx="1" fill="#0a0a0f"/>
+        <rect x="14" y="5" width="2" height="3" rx="1" fill="#0a0a0f"/>
+        <rect x="2" y="10" width="2" height="3" rx="1" fill="#0a0a0f"/>
+        <rect x="14" y="10" width="2" height="3" rx="1" fill="#0a0a0f"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">RoadGuard</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#map">Map</a>
+    <a href="#leaderboard">Leaderboard</a>
+    <a href="#stack">Stack</a>
+  </div>
+  <button class="nav-cta">Download App</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    Powered by YOLOv8 Real-time Detection
+  </div>
+
+  <h1>
+    Roads that report<br>
+    <span class="accent">themselves.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Upload a road video, let AI detect every pothole in milliseconds, earn points, and help build safer cities — together.
+  </p>
+
+  <div class="hero-actions">
+    <button class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="12" width="12" height="2" rx="1" fill="currentColor"/></svg>
+      Get Started Free
+    </button>
+    <button class="btn-ghost">Watch Demo →</button>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-val">94.2%</div>
+      <div class="hero-stat-label">Detection accuracy</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">12k+</div>
+      <div class="hero-stat-label">Potholes mapped</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">3.2k</div>
+      <div class="hero-stat-label">Active contributors</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">18</div>
+      <div class="hero-stat-label">Cities covered</div>
+    </div>
+  </div>
+</section>
+
+<!-- UPLOAD SECTION -->
+<section id="upload" style="padding-top:60px">
+  <div class="reveal" style="max-width:680px;margin:0 auto;text-align:center">
+    <div class="section-label">Try it now</div>
+    <div class="section-title">Upload a Road Video</div>
+    <p class="section-sub" style="margin:0 auto 36px">Drop a dashcam or phone video and watch AI detect potholes frame by frame.</p>
+
+    <!-- Drop zone -->
+    <div id="dropZone" style="
+      border:2px dashed rgba(240,165,0,0.35);border-radius:20px;
+      padding:52px 32px;background:var(--bg2);cursor:pointer;
+      transition:all .2s;position:relative;
+    ">
+      <input type="file" id="fileInput" accept="video/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+      <div id="dropContent">
+        <div style="font-size:48px;margin-bottom:12px">🎥</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:600;margin-bottom:8px">Drag & drop your video here</div>
+        <div style="color:var(--muted);font-size:14px;margin-bottom:20px">MP4, MOV, AVI — up to 200MB</div>
+        <button class="btn-primary" style="pointer-events:none">Browse File</button>
+      </div>
+    </div>
+
+    <!-- Processing state (hidden) -->
+    <div id="processingState" style="display:none;margin-top:28px">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px">
+        <div id="fileName" style="font-size:14px;color:var(--muted);margin-bottom:16px"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div id="progressBar" style="height:100%;background:var(--amber);border-radius:3px;width:0%;transition:width .4s ease"></div>
+          </div>
+          <div id="progressPct" style="font-size:13px;font-weight:600;color:var(--amber);width:36px;text-align:right">0%</div>
+        </div>
+        <div id="progressLabel" style="font-size:13px;color:var(--muted)">Initializing model…</div>
+      </div>
+    </div>
+
+    <!-- Results state (hidden) -->
+    <div id="resultsState" style="display:none;margin-top:28px">
+      <div style="background:var(--bg2);border:1px solid rgba(240,165,0,0.25);border-radius:16px;padding:28px 24px;text-align:left">
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:20px;color:var(--amber)">✅ Detection Complete</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+          <div style="background:rgba(226,75,74,0.1);border:1px solid rgba(226,75,74,0.3);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#e24b4a" id="res-severe">0</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Severe</div>
+          </div>
+          <div style="background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.3);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#f0a500" id="res-moderate">0</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Moderate</div>
+          </div>
+          <div style="background:rgba(29,170,117,0.1);border:1px solid rgba(29,170,117,0.3);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#1daa75" id="res-minor">0</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Minor</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div id="res-pts" style="background:var(--amber-dim);border:1px solid rgba(240,165,0,0.3);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--amber);font-weight:600"></div>
+          <div id="res-health" style="background:var(--faint);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--muted)"></div>
+        </div>
+        <button onclick="resetUpload()" style="margin-top:18px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:24px;font-size:13px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--amber)';this.style.color='var(--amber)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Upload another video</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="padding-top:60px">
+  <div class="reveal">
+    <div class="section-label">How it works</div>
+    <div class="section-title">From road to report<br>in four steps</div>
+  </div>
+  <div class="how-grid reveal">
+    <div class="how-card">
+      <div class="how-num">01</div>
+      <div class="how-icon">🎥</div>
+      <div class="how-title">Record or upload</div>
+      <div class="how-desc">Drive normally. Record a 10–30 second clip of any road, or upload from your gallery. GPS coordinates are captured automatically.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">02</div>
+      <div class="how-icon">⚡</div>
+      <div class="how-title">AI analyzes frames</div>
+      <div class="how-desc">YOLOv8 processes every frame, drawing precise bounding boxes around potholes with confidence scores in real time.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">03</div>
+      <div class="how-icon">📍</div>
+      <div class="how-title">Pin to the map</div>
+      <div class="how-desc">Detected potholes are geotagged and added to the live crowdsourced map. Severity is auto-classified: minor, moderate, or severe.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">04</div>
+      <div class="how-icon">🏆</div>
+      <div class="how-title">Earn points</div>
+      <div class="how-desc">Get 10 points per pothole detected. Climb the leaderboard, unlock badges, and build your city's road health score.</div>
+    </div>
+  </div>
+</section>
+
+<!-- DETECTION FEATURE -->
+<section id="features">
+  <div class="features-layout reveal">
+    <div>
+      <div class="section-label">Core detection</div>
+      <div class="section-title">Real-time pothole detection</div>
+      <div class="section-sub">Our YOLOv8 model processes video frame-by-frame, drawing precise bounding boxes with severity classification and sub-second inference.</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon-wrap">🎯</div>
+          <div>
+            <div class="feature-item-title">94.2% detection accuracy</div>
+            <div class="feature-item-desc">Trained on 50k+ labeled road frames across diverse lighting and road conditions.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-wrap">⚡</div>
+          <div>
+            <div class="feature-item-title">Under 200ms inference</div>
+            <div class="feature-item-desc">Edge-optimized model runs entirely on-device for offline detection capability.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-wrap">📊</div>
+          <div>
+            <div class="feature-item-title">Severity classification</div>
+            <div class="feature-item-desc">Three-tier classification — minor, moderate, severe — based on bounding box area and edge sharpness.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="features-visual">
+      <div class="detect-demo">
+        <div class="road-surface"></div>
+        <div class="lane-mark" style="top:0;bottom:0;height:100%;"></div>
+
+        <div class="bbox-demo" style="left:12%;top:30%;width:22%;height:20%;border-color:#e24b4a;animation-delay:0s">
+          <div class="bbox-lab" style="background:#e24b4a;color:#fff">Severe — 96%</div>
+        </div>
+        <div class="bbox-demo" style="left:55%;top:44%;width:16%;height:16%;border-color:#f0a500;animation-delay:1s">
+          <div class="bbox-lab" style="background:#f0a500;color:#0a0a0f">Moderate — 91%</div>
+        </div>
+        <div class="bbox-demo" style="left:34%;top:64%;width:12%;height:12%;border-color:#1daa75;animation-delay:2s">
+          <div class="bbox-lab" style="background:#1daa75;color:#fff">Minor — 88%</div>
+        </div>
+
+        <div class="detect-badge">YOLOv8 · 3 potholes detected · 18.4s clip</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROAD HEALTH SCORE -->
+<section style="padding-top:0">
+  <div class="features-layout flip reveal">
+    <div class="features-visual">
+      <div class="score-demo">
+        <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Sector Road, Bhubaneswar</div>
+        <div class="score-ring-wrap">
+          <div class="score-ring"><div class="score-ring-inner">62</div></div>
+          <div>
+            <div class="score-info-label">Road health score</div>
+            <div class="score-info-val" style="color:#f0a500">Poor condition</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">18 reports this week</div>
+          </div>
+        </div>
+        <div class="score-bar-row">
+          <div style="font-size:12px;font-weight:500;margin-bottom:4px">Nearby areas</div>
+          <div class="score-bar-item">
+            <div class="score-bar-label">NH-16</div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:85%;background:#1daa75"></div></div>
+            <div class="score-bar-num" style="color:#1daa75">85</div>
+          </div>
+          <div class="score-bar-item">
+            <div class="score-bar-label">Saheed Nagar</div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:71%;background:#f0a500"></div></div>
+            <div class="score-bar-num" style="color:#f0a500">71</div>
+          </div>
+          <div class="score-bar-item">
+            <div class="score-bar-label">Sector Road</div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:62%;background:#f0a500"></div></div>
+            <div class="score-bar-num" style="color:#f0a500">62</div>
+          </div>
+          <div class="score-bar-item">
+            <div class="score-bar-label">Old Town</div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:38%;background:#e24b4a"></div></div>
+            <div class="score-bar-num" style="color:#e24b4a">38</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Road intelligence</div>
+      <div class="section-title">Area Road Health Score</div>
+      <div class="section-sub">Turn crowdsourced reports into actionable infrastructure data. Each area gets a 0–100 health score updated in real time.</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon-wrap">🏙️</div>
+          <div>
+            <div class="feature-item-title">City-wide dashboard</div>
+            <div class="feature-item-desc">Municipality portals get live score feeds to prioritize maintenance budgets.</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-wrap">📈</div>
+          <div>
+            <div class="feature-item-title">Weekly trend tracking</div>
+            <div class="feature-item-desc">Scores decay over time as conditions improve or worsen — always current.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section id="map" style="padding-top:0">
+  <div class="features-layout reveal">
+    <div>
+      <div class="section-label">Crowdsourced map</div>
+      <div class="section-title">Every pothole,<br>on one map</div>
+      <div class="section-sub">Real-time pins from contributors across the city. Tap any pin to see the original video frame, date, reporter, and severity.</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon-wrap" style="background:rgba(29,170,117,0.12)">🟢</div>
+          <div><div class="feature-item-title">Minor</div><div class="feature-item-desc">Surface cracks, shallow depressions under 5cm deep.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-wrap" style="background:rgba(240,165,0,0.12)">🟠</div>
+          <div><div class="feature-item-title">Moderate</div><div class="feature-item-desc">Visible potholes causing vibration, 5–15cm deep.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-wrap" style="background:rgba(226,75,74,0.12)">🔴</div>
+          <div><div class="feature-item-title">Severe</div><div class="feature-item-desc">Large holes, risk of tyre damage or accidents, 15cm+.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="features-visual">
+      <div class="map-demo">
+        <div class="map-tiles"></div>
+        <div class="map-road-h" style="top:38%;height:20px"></div>
+        <div class="map-road-h" style="top:62%;height:16px"></div>
+        <div class="map-road-v" style="left:35%;width:20px"></div>
+        <div class="map-road-v" style="left:66%;width:16px"></div>
+
+        <!-- pins -->
+        <div class="map-pin" style="width:14px;height:14px;background:#e24b4a;left:28%;top:36%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:14px;height:14px;background:#e24b4a;left:58%;top:40%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:12px;height:12px;background:#f0a500;left:45%;top:39%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:12px;height:12px;background:#f0a500;left:72%;top:64%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:12px;height:12px;background:#f0a500;left:40%;top:65%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:10px;height:10px;background:#1daa75;left:55%;top:70%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:10px;height:10px;background:#1daa75;left:22%;top:60%;transform:translate(-50%,-50%)"></div>
+        <div class="map-pin" style="width:10px;height:10px;background:#1daa75;left:80%;top:44%;transform:translate(-50%,-50%)"></div>
+
+        <div class="map-tooltip" style="left:30%;top:22%">
+          <div style="color:var(--amber);font-weight:600;margin-bottom:2px">Severe Pothole</div>
+          <div style="color:var(--muted)">Sector Road · 3 reports · Today</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEADERBOARD -->
+<section id="leaderboard" style="text-align:center">
+  <div class="reveal">
+    <div class="section-label" style="text-align:center">Community</div>
+    <div class="section-title">Top Contributors</div>
+    <p class="section-sub" style="margin:0 auto">Gamified reporting keeps the community active. Earn points, climb ranks, unlock badges for every milestone.</p>
+  </div>
+  <div class="lb-wrap reveal">
+    <div class="lb-row-demo gold">
+      <div class="lb-rank-demo" style="color:#f0a500">1</div>
+      <div class="lb-av-demo" style="background:rgba(240,165,0,0.15);color:#f0a500">RV</div>
+      <div>
+        <div class="lb-name-demo">Rahul Verma <span class="badge-demo">🚧 Road Guardian</span></div>
+        <div class="lb-city-demo">Bhubaneswar · 62 uploads</div>
+      </div>
+      <div class="lb-pts-demo">540 pts</div>
+    </div>
+    <div class="lb-row-demo">
+      <div class="lb-rank-demo" style="color:var(--muted)">2</div>
+      <div class="lb-av-demo" style="background:rgba(29,170,117,0.12);color:#1daa75">AK</div>
+      <div>
+        <div class="lb-name-demo">Anmol Kumar <span class="badge-demo">🗺 City Contributor</span></div>
+        <div class="lb-city-demo">Bhubaneswar · 48 uploads</div>
+      </div>
+      <div class="lb-pts-demo">480 pts</div>
+    </div>
+    <div class="lb-row-demo">
+      <div class="lb-rank-demo" style="color:var(--muted)">3</div>
+      <div class="lb-av-demo" style="background:rgba(178,97,232,0.12);color:#b261e8">SN</div>
+      <div>
+        <div class="lb-name-demo">Sneha Nair</div>
+        <div class="lb-city-demo">Bhubaneswar · 41 uploads</div>
+      </div>
+      <div class="lb-pts-demo">420 pts</div>
+    </div>
+    <div class="lb-row-demo">
+      <div class="lb-rank-demo" style="color:var(--muted)">4</div>
+      <div class="lb-av-demo" style="background:rgba(52,152,219,0.12);color:#3498db">PR</div>
+      <div>
+        <div class="lb-name-demo">Priya Rao</div>
+        <div class="lb-city-demo">Cuttack · 35 uploads</div>
+      </div>
+      <div class="lb-pts-demo">390 pts</div>
+    </div>
+    <div class="lb-row-demo">
+      <div class="lb-rank-demo" style="color:var(--muted)">5</div>
+      <div class="lb-av-demo" style="background:rgba(231,76,60,0.12);color:#e74c3c">MK</div>
+      <div>
+        <div class="lb-name-demo">Mohit Kumar</div>
+        <div class="lb-city-demo">Bhubaneswar · 30 uploads</div>
+      </div>
+      <div class="lb-pts-demo">355 pts</div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="stack">
+  <div class="reveal">
+    <div class="section-label">Tech stack</div>
+    <div class="section-title">Built for scale</div>
+    <p class="section-sub">Production-grade architecture from mobile to ML inference to real-time maps.</p>
+  </div>
+  <div class="stack-grid reveal">
+    <div class="stack-card">
+      <div class="stack-icon">📱</div>
+      <div class="stack-name">Flutter</div>
+      <div class="stack-role">Cross-platform mobile</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-icon">🔥</div>
+      <div class="stack-name">Firebase</div>
+      <div class="stack-role">Auth · Realtime DB</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-icon">🟢</div>
+      <div class="stack-name">Node.js</div>
+      <div class="stack-role">Backend API</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-icon">🤖</div>
+      <div class="stack-name">YOLOv8</div>
+      <div class="stack-role">Pothole detection ML</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-icon">🗂️</div>
+      <div class="stack-name">Firestore</div>
+      <div class="stack-role">NoSQL database</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-icon">🗺️</div>
+      <div class="stack-name">Google Maps</div>
+      <div class="stack-role">Geospatial mapping</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section reveal">
+  <div class="cta-glow"></div>
+  <h2>Start reporting.<br>Start earning.</h2>
+  <p>Join 3,200+ contributors already mapping safer roads across 18 cities.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <button class="btn-primary">Download for iOS</button>
+    <button class="btn-primary" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)">Download for Android</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="width:20px;height:20px;border-radius:5px;background:var(--amber);display:flex;align-items:center;justify-content:center">
+        <svg width="11" height="11" viewBox="0 0 18 18" fill="none"><rect x="7" y="1" width="4" height="16" rx="1.5" fill="#0a0a0f"/><rect x="2" y="5" width="2" height="3" rx="1" fill="#0a0a0f"/><rect x="14" y="5" width="2" height="3" rx="1" fill="#0a0a0f"/><rect x="2" y="10" width="2" height="3" rx="1" fill="#0a0a0f"/><rect x="14" y="10" width="2" height="3" rx="1" fill="#0a0a0f"/></svg>
+      </div>
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">RoadGuard</span>
+    </div>
+    <p>Helping cities build smarter infrastructure, one pothole at a time.</p>
+  </div>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">API Docs</a>
+    <a href="#">Contact</a>
+  </div>
+</footer>
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Upload logic
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor='var(--amber)'; dropZone.style.background='var(--amber-dim)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor='rgba(240,165,0,0.35)'; dropZone.style.background='var(--bg2)'; });
+dropZone.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if(f && f.type.startsWith('video/')) startProcessing(f); });
+fileInput.addEventListener('change', () => { if(fileInput.files[0]) startProcessing(fileInput.files[0]); });
+
+function startProcessing(file) {
+  document.getElementById('dropZone').style.display='none';
+  document.getElementById('processingState').style.display='block';
+  document.getElementById('fileName').textContent = '📁 ' + file.name;
+  const steps = [
+    [10, 'Loading YOLOv8 model…'],
+    [28, 'Extracting video frames…'],
+    [50, 'Running inference on frames…'],
+    [72, 'Classifying pothole severity…'],
+    [88, 'Geotagging detections…'],
+    [100, 'Finalizing report…']
+  ];
+  let i = 0;
+  const bar = document.getElementById('progressBar');
+  const pct = document.getElementById('progressPct');
+  const lbl = document.getElementById('progressLabel');
+  const iv = setInterval(() => {
+    if(i >= steps.length) { clearInterval(iv); setTimeout(showResults, 400); return; }
+    bar.style.width = steps[i][0]+'%';
+    pct.textContent = steps[i][0]+'%';
+    lbl.textContent = steps[i][1];
+    i++;
+  }, 700);
+}
+
+function showResults() {
+  document.getElementById('processingState').style.display='none';
+  document.getElementById('resultsState').style.display='block';
+  const severe = Math.floor(Math.random()*4)+1;
+  const moderate = Math.floor(Math.random()*5)+2;
+  const minor = Math.floor(Math.random()*6)+2;
+  const total = severe+moderate+minor;
+  const pts = total*10;
+  const health = Math.max(20, 100 - severe*15 - moderate*7 - minor*3);
+  document.getElementById('res-severe').textContent=severe;
+  document.getElementById('res-moderate').textContent=moderate;
+  document.getElementById('res-minor').textContent=minor;
+  document.getElementById('res-pts').textContent='🏆 +'+pts+' points earned';
+  document.getElementById('res-health').textContent='Road health score: '+health+'/100';
+}
+
+function resetUpload() {
+  document.getElementById('dropZone').style.display='block';
+  document.getElementById('dropZone').style.borderColor='rgba(240,165,0,0.35)';
+  document.getElementById('dropZone').style.background='var(--bg2)';
+  document.getElementById('processingState').style.display='none';
+  document.getElementById('resultsState').style.display='none';
+  fileInput.value='';
+}
+
+// Smooth scroll for nav links
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
