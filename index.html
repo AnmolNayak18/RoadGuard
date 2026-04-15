@@ -6,6 +6,10 @@
 <title>RoadGuard — Pothole Detection Platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <style>
 :root {
   --bg: #0a0a0f;
@@ -31,7 +35,6 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
 }
-/* NOISE OVERLAY */
 body::before {
   content: '';
   position: fixed; inset: 0;
@@ -57,12 +60,193 @@ nav {
 .nav-links { display: flex; gap: 32px; }
 .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; cursor: pointer; }
 .nav-links a:hover { color: var(--text); }
+
+/* NAV RIGHT AREA */
+.nav-right { display: flex; align-items: center; gap: 12px; }
+
+/* NAV USER PILL (shown when logged in) */
+.nav-user-pill {
+  display: none; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 24px; padding: 4px 14px 4px 4px;
+  cursor: pointer; transition: border-color .2s;
+}
+.nav-user-pill:hover { border-color: rgba(240,165,0,0.4); }
+.nav-user-pill.show { display: flex; }
+.nav-user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  object-fit: cover; border: 1px solid var(--border);
+}
+.nav-user-name { font-size: 13px; font-weight: 500; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .nav-cta {
   background: var(--amber); color: #0a0a0f; border: none;
   padding: 8px 20px; border-radius: 24px; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 500; cursor: pointer; transition: background .2s, transform .15s;
 }
 .nav-cta:hover { background: var(--amber2); transform: translateY(-1px); }
+.nav-cta.outline {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border);
+}
+.nav-cta.outline:hover { border-color: var(--amber); color: var(--amber); background: transparent; transform: none; }
+
+/* ── AUTH MODAL ── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease;
+  padding: 20px;
+}
+.auth-overlay.open { opacity: 1; pointer-events: all; }
+
+.auth-modal {
+  background: var(--bg2);
+  border: 1px solid rgba(240,165,0,0.18);
+  border-radius: 24px;
+  width: 100%; max-width: 420px;
+  padding: 40px 36px 36px;
+  position: relative;
+  transform: translateY(24px) scale(0.97);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  overflow: hidden;
+}
+.auth-overlay.open .auth-modal { transform: translateY(0) scale(1); }
+
+/* decorative top glow */
+.auth-modal::before {
+  content: '';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 260px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+.auth-modal::after {
+  content: '';
+  position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+  width: 300px; height: 120px;
+  background: radial-gradient(ellipse, rgba(240,165,0,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.auth-close {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted); width: 32px; height: 32px; border-radius: 50%;
+  font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .2s; line-height: 1;
+}
+.auth-close:hover { color: var(--text); border-color: var(--amber); }
+
+.auth-logo-area { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.auth-logo-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--amber); display: flex; align-items: center; justify-content: center;
+}
+.auth-logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+
+.auth-tabs {
+  display: flex; gap: 0; margin-bottom: 28px;
+  background: var(--bg3); border-radius: 10px; padding: 4px;
+  border: 1px solid var(--border);
+}
+.auth-tab {
+  flex: 1; padding: 9px; border-radius: 7px; border: none;
+  background: transparent; color: var(--muted);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all .2s;
+}
+.auth-tab.active {
+  background: var(--bg2); color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Google button */
+.google-btn {
+  width: 100%; padding: 13px 20px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: #fff; color: #1f1f1f;
+  border: none; border-radius: 12px;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all .2s;
+  position: relative; overflow: hidden;
+}
+.google-btn:hover { background: #f5f5f5; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,0,0,0.3); }
+.google-btn:active { transform: translateY(0); }
+.google-icon { flex-shrink: 0; }
+
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0; color: var(--muted); font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Email form inputs */
+.auth-field { margin-bottom: 14px; }
+.auth-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; letter-spacing: 0.3px; }
+.auth-field input {
+  width: 100%; padding: 12px 14px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px;
+  outline: none; transition: border-color .2s;
+}
+.auth-field input:focus { border-color: rgba(240,165,0,0.5); }
+.auth-field input::placeholder { color: var(--muted); }
+
+.auth-submit {
+  width: 100%; padding: 13px;
+  background: var(--amber); color: #0a0a0f; border: none;
+  border-radius: 12px; font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all .2s; margin-top: 6px;
+}
+.auth-submit:hover { background: var(--amber2); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(240,165,0,0.25); }
+
+.auth-footer-note {
+  text-align: center; font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.6;
+}
+.auth-footer-note a { color: var(--amber); text-decoration: none; }
+
+/* User dropdown */
+.nav-user-dropdown {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 8px; min-width: 200px;
+  display: none; flex-direction: column; gap: 2px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  z-index: 200;
+}
+.nav-user-dropdown.show { display: flex; }
+.dropdown-user-info {
+  padding: 10px 12px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+}
+.dropdown-user-info .d-name { font-size: 14px; font-weight: 600; }
+.dropdown-user-info .d-email { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dropdown-item {
+  padding: 9px 12px; border-radius: 8px; font-size: 13px;
+  cursor: pointer; color: var(--muted); display: flex; align-items: center; gap: 8px;
+  transition: all .15s; border: none; background: none; width: 100%; text-align: left;
+  font-family: 'DM Sans', sans-serif;
+}
+.dropdown-item:hover { background: var(--bg3); color: var(--text); }
+.dropdown-item.danger:hover { background: rgba(226,75,74,0.1); color: #e24b4a; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--bg2); border: 1px solid rgba(240,165,0,0.35);
+  border-radius: 12px; padding: 12px 20px;
+  display: flex; align-items: center; gap: 10px; font-size: 14px;
+  opacity: 0; transition: all .3s ease; z-index: 600; white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast-icon { font-size: 16px; }
 
 /* HERO */
 .hero {
@@ -345,6 +529,7 @@ footer p { color: var(--muted); font-size: 13px; }
   .features-layout { grid-template-columns: 1fr; }
   .features-layout.flip { direction: ltr; }
   .nav-links { display: none; }
+  .auth-modal { padding: 32px 22px 28px; }
 }
 
 /* SCROLL REVEAL */
@@ -354,6 +539,87 @@ footer p { color: var(--muted); font-size: 13px; }
 </head>
 <body>
 
+<!-- ── AUTH MODAL ── -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-modal" id="authModal">
+    <button class="auth-close" onclick="closeAuth()" aria-label="Close">✕</button>
+
+    <div class="auth-logo-area">
+      <div class="auth-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
+          <rect x="7" y="1" width="4" height="16" rx="1.5" fill="#0a0a0f"/>
+          <rect x="2" y="5" width="2" height="3" rx="1" fill="#0a0a0f"/>
+          <rect x="14" y="5" width="2" height="3" rx="1" fill="#0a0a0f"/>
+          <rect x="2" y="10" width="2" height="3" rx="1" fill="#0a0a0f"/>
+          <rect x="14" y="10" width="2" height="3" rx="1" fill="#0a0a0f"/>
+        </svg>
+      </div>
+      <span class="auth-logo-text">RoadGuard</span>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Sign in</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchTab('signup')">Create account</button>
+    </div>
+
+    <!-- Google Sign-In button -->
+    <button class="google-btn" onclick="handleGoogleSignIn()">
+      <svg class="google-icon" width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+        <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or use email</div>
+
+    <!-- Email form (login) -->
+    <div id="loginForm">
+      <div class="auth-field">
+        <label>Email address</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-submit" onclick="handleEmailLogin()">Sign in →</button>
+      <p class="auth-footer-note">Don't have an account? <a href="#" onclick="switchTab('signup');return false;">Sign up free</a></p>
+    </div>
+
+    <!-- Email form (signup) -->
+    <div id="signupForm" style="display:none">
+      <div class="auth-field">
+        <label>Full name</label>
+        <input type="text" id="signupName" placeholder="Your name" autocomplete="name">
+      </div>
+      <div class="auth-field">
+        <label>Email address</label>
+        <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="Create a password" autocomplete="new-password">
+      </div>
+      <button class="auth-submit" onclick="handleEmailSignup()">Create account →</button>
+      <p class="auth-footer-note">Already have an account? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
+    </div>
+
+    <p class="auth-footer-note" style="margin-top:14px">
+      By continuing you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>.
+    </p>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✅</span>
+  <span id="toastMsg">Signed in successfully!</span>
+</div>
+
+<!-- NAV -->
 <nav>
   <a class="nav-logo" href="#">
     <div class="nav-logo-icon">
@@ -374,7 +640,31 @@ footer p { color: var(--muted); font-size: 13px; }
     <a href="#leaderboard">Leaderboard</a>
     <a href="#stack">Stack</a>
   </div>
-  <button class="nav-cta">Download App</button>
+  <div class="nav-right" style="position:relative">
+    <!-- Logged-out state -->
+    <button class="nav-cta outline" id="navSignin" onclick="openAuth('login')" style="display:none">Sign in</button>
+    <button class="nav-cta" id="navGetStarted" onclick="openAuth('signup')">Get started</button>
+
+    <!-- Logged-in state -->
+    <div class="nav-user-pill" id="navUserPill" onclick="toggleDropdown()">
+      <img class="nav-user-avatar" id="navAvatar" src="" alt="avatar">
+      <span class="nav-user-name" id="navUserName"></span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:2px;opacity:.5">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="nav-user-dropdown" id="userDropdown">
+      <div class="dropdown-user-info">
+        <div class="d-name" id="dropName"></div>
+        <div class="d-email" id="dropEmail"></div>
+      </div>
+      <button class="dropdown-item">👤 &nbsp;My profile</button>
+      <button class="dropdown-item">🏆 &nbsp;My points &amp; badges</button>
+      <button class="dropdown-item">📍 &nbsp;My reports</button>
+      <button class="dropdown-item danger" onclick="handleSignOut()">← &nbsp;Sign out</button>
+    </div>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -397,7 +687,7 @@ footer p { color: var(--muted); font-size: 13px; }
   </p>
 
   <div class="hero-actions">
-    <button class="btn-primary">
+    <button class="btn-primary" onclick="openAuth('signup')">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="12" width="12" height="2" rx="1" fill="currentColor"/></svg>
       Get Started Free
     </button>
@@ -431,7 +721,6 @@ footer p { color: var(--muted); font-size: 13px; }
     <div class="section-title">Upload a Road Video</div>
     <p class="section-sub" style="margin:0 auto 36px">Drop a dashcam or phone video and watch AI detect potholes frame by frame.</p>
 
-    <!-- Drop zone -->
     <div id="dropZone" style="
       border:2px dashed rgba(240,165,0,0.35);border-radius:20px;
       padding:52px 32px;background:var(--bg2);cursor:pointer;
@@ -446,7 +735,6 @@ footer p { color: var(--muted); font-size: 13px; }
       </div>
     </div>
 
-    <!-- Processing state (hidden) -->
     <div id="processingState" style="display:none;margin-top:28px">
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 24px">
         <div id="fileName" style="font-size:14px;color:var(--muted);margin-bottom:16px"></div>
@@ -460,7 +748,6 @@ footer p { color: var(--muted); font-size: 13px; }
       </div>
     </div>
 
-    <!-- Results state (hidden) -->
     <div id="resultsState" style="display:none;margin-top:28px">
       <div style="background:var(--bg2);border:1px solid rgba(240,165,0,0.25);border-radius:16px;padding:28px 24px;text-align:left">
         <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:20px;color:var(--amber)">✅ Detection Complete</div>
@@ -557,7 +844,6 @@ footer p { color: var(--muted); font-size: 13px; }
       <div class="detect-demo">
         <div class="road-surface"></div>
         <div class="lane-mark" style="top:0;bottom:0;height:100%;"></div>
-
         <div class="bbox-demo" style="left:12%;top:30%;width:22%;height:20%;border-color:#e24b4a;animation-delay:0s">
           <div class="bbox-lab" style="background:#e24b4a;color:#fff">Severe — 96%</div>
         </div>
@@ -567,7 +853,6 @@ footer p { color: var(--muted); font-size: 13px; }
         <div class="bbox-demo" style="left:34%;top:64%;width:12%;height:12%;border-color:#1daa75;animation-delay:2s">
           <div class="bbox-lab" style="background:#1daa75;color:#fff">Minor — 88%</div>
         </div>
-
         <div class="detect-badge">YOLOv8 · 3 potholes detected · 18.4s clip</div>
       </div>
     </div>
@@ -666,8 +951,6 @@ footer p { color: var(--muted); font-size: 13px; }
         <div class="map-road-h" style="top:62%;height:16px"></div>
         <div class="map-road-v" style="left:35%;width:20px"></div>
         <div class="map-road-v" style="left:66%;width:16px"></div>
-
-        <!-- pins -->
         <div class="map-pin" style="width:14px;height:14px;background:#e24b4a;left:28%;top:36%;transform:translate(-50%,-50%)"></div>
         <div class="map-pin" style="width:14px;height:14px;background:#e24b4a;left:58%;top:40%;transform:translate(-50%,-50%)"></div>
         <div class="map-pin" style="width:12px;height:12px;background:#f0a500;left:45%;top:39%;transform:translate(-50%,-50%)"></div>
@@ -676,7 +959,6 @@ footer p { color: var(--muted); font-size: 13px; }
         <div class="map-pin" style="width:10px;height:10px;background:#1daa75;left:55%;top:70%;transform:translate(-50%,-50%)"></div>
         <div class="map-pin" style="width:10px;height:10px;background:#1daa75;left:22%;top:60%;transform:translate(-50%,-50%)"></div>
         <div class="map-pin" style="width:10px;height:10px;background:#1daa75;left:80%;top:44%;transform:translate(-50%,-50%)"></div>
-
         <div class="map-tooltip" style="left:30%;top:22%">
           <div style="color:var(--amber);font-weight:600;margin-bottom:2px">Severe Pothole</div>
           <div style="color:var(--muted)">Sector Road · 3 reports · Today</div>
@@ -750,36 +1032,12 @@ footer p { color: var(--muted); font-size: 13px; }
     <p class="section-sub">Production-grade architecture from mobile to ML inference to real-time maps.</p>
   </div>
   <div class="stack-grid reveal">
-    <div class="stack-card">
-      <div class="stack-icon">📱</div>
-      <div class="stack-name">Flutter</div>
-      <div class="stack-role">Cross-platform mobile</div>
-    </div>
-    <div class="stack-card">
-      <div class="stack-icon">🔥</div>
-      <div class="stack-name">Firebase</div>
-      <div class="stack-role">Auth · Realtime DB</div>
-    </div>
-    <div class="stack-card">
-      <div class="stack-icon">🟢</div>
-      <div class="stack-name">Node.js</div>
-      <div class="stack-role">Backend API</div>
-    </div>
-    <div class="stack-card">
-      <div class="stack-icon">🤖</div>
-      <div class="stack-name">YOLOv8</div>
-      <div class="stack-role">Pothole detection ML</div>
-    </div>
-    <div class="stack-card">
-      <div class="stack-icon">🗂️</div>
-      <div class="stack-name">Firestore</div>
-      <div class="stack-role">NoSQL database</div>
-    </div>
-    <div class="stack-card">
-      <div class="stack-icon">🗺️</div>
-      <div class="stack-name">Google Maps</div>
-      <div class="stack-role">Geospatial mapping</div>
-    </div>
+    <div class="stack-card"><div class="stack-icon">📱</div><div class="stack-name">Flutter</div><div class="stack-role">Cross-platform mobile</div></div>
+    <div class="stack-card"><div class="stack-icon">🔥</div><div class="stack-name">Firebase</div><div class="stack-role">Auth · Realtime DB</div></div>
+    <div class="stack-card"><div class="stack-icon">🟢</div><div class="stack-name">Node.js</div><div class="stack-role">Backend API</div></div>
+    <div class="stack-card"><div class="stack-icon">🤖</div><div class="stack-name">YOLOv8</div><div class="stack-role">Pothole detection ML</div></div>
+    <div class="stack-card"><div class="stack-icon">🗂️</div><div class="stack-name">Firestore</div><div class="stack-role">NoSQL database</div></div>
+    <div class="stack-card"><div class="stack-icon">🗺️</div><div class="stack-name">Google Maps</div><div class="stack-role">Geospatial mapping</div></div>
   </div>
 </section>
 
@@ -814,12 +1072,175 @@ footer p { color: var(--muted); font-size: 13px; }
 </footer>
 
 <script>
+/* ── SCROLL REVEAL ── */
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); } });
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.1 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-// Upload logic
+/* ── SMOOTH SCROLL ── */
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.querySelector(link.getAttribute('href'));
+    if (t) t.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+
+/* ── AUTH STATE ── */
+let currentUser = null;
+
+function updateNavState() {
+  const pill = document.getElementById('navUserPill');
+  const signin = document.getElementById('navSignin');
+  const getStarted = document.getElementById('navGetStarted');
+  if (currentUser) {
+    pill.classList.add('show');
+    signin.style.display = 'none';
+    getStarted.style.display = 'none';
+    document.getElementById('navAvatar').src = currentUser.avatar;
+    document.getElementById('navUserName').textContent = currentUser.name.split(' ')[0];
+    document.getElementById('dropName').textContent = currentUser.name;
+    document.getElementById('dropEmail').textContent = currentUser.email;
+  } else {
+    pill.classList.remove('show');
+    signin.style.display = 'block';
+    getStarted.style.display = 'block';
+    document.getElementById('userDropdown').classList.remove('show');
+  }
+}
+
+/* ── MODAL ── */
+function openAuth(tab = 'login') {
+  switchTab(tab);
+  document.getElementById('authOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeAuth() {
+  document.getElementById('authOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('authOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('authOverlay')) closeAuth();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAuth(); });
+
+function switchTab(tab) {
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+}
+
+/* ── TOAST ── */
+function showToast(msg, icon = '✅') {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = icon;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ── DROPDOWN ── */
+function toggleDropdown() {
+  document.getElementById('userDropdown').classList.toggle('show');
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('navUserPill').contains(e.target)) {
+    document.getElementById('userDropdown').classList.remove('show');
+  }
+});
+
+/* ── GOOGLE SIGN-IN ── */
+function handleGoogleSignIn() {
+  // Initialize Google Identity Services
+  // Replace 'YOUR_GOOGLE_CLIENT_ID' with your actual Client ID from Google Cloud Console
+  const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+
+  if (CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+    // Demo mode: simulate successful Google sign-in
+    simulateGoogleLogin();
+    return;
+  }
+
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleGoogleCredential,
+    auto_select: false,
+  });
+  google.accounts.id.prompt();
+}
+
+function handleGoogleCredential(response) {
+  // Decode JWT payload (in production, verify on your server)
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  currentUser = {
+    name: payload.name,
+    email: payload.email,
+    avatar: payload.picture,
+  };
+  closeAuth();
+  updateNavState();
+  showToast('Welcome, ' + currentUser.name.split(' ')[0] + '! 🛣️');
+}
+
+function simulateGoogleLogin() {
+  // Demo fallback when no real Client ID is set
+  currentUser = {
+    name: 'Demo User',
+    email: 'demo@roadguard.app',
+    avatar: 'https://ui-avatars.com/api/?name=Demo+User&background=f0a500&color=0a0a0f&size=64',
+  };
+  closeAuth();
+  updateNavState();
+  showToast('Welcome to RoadGuard! 🛣️');
+}
+
+/* ── EMAIL LOGIN ── */
+function handleEmailLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { showToast('Please fill in all fields.', '⚠️'); return; }
+  // Demo: accept any credentials
+  const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  currentUser = {
+    name,
+    email,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0a500&color=0a0a0f&size=64`,
+  };
+  closeAuth();
+  updateNavState();
+  showToast('Welcome back, ' + name.split(' ')[0] + '!');
+}
+
+/* ── EMAIL SIGNUP ── */
+function handleEmailSignup() {
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  if (!name || !email || !password) { showToast('Please fill in all fields.', '⚠️'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters.', '⚠️'); return; }
+  currentUser = {
+    name,
+    email,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0a500&color=0a0a0f&size=64`,
+  };
+  closeAuth();
+  updateNavState();
+  showToast('Account created! Welcome, ' + name.split(' ')[0] + '! 🎉');
+}
+
+/* ── SIGN OUT ── */
+function handleSignOut() {
+  currentUser = null;
+  updateNavState();
+  showToast('Signed out successfully.', '👋');
+}
+
+// Init nav state on load
+updateNavState();
+
+/* ── UPLOAD LOGIC ── */
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
@@ -877,15 +1298,6 @@ function resetUpload() {
   document.getElementById('resultsState').style.display='none';
   fileInput.value='';
 }
-
-// Smooth scroll for nav links
-document.querySelectorAll('a[href^="#"]').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const target = document.querySelector(link.getAttribute('href'));
-    if (target) target.scrollIntoView({ behavior: 'smooth' });
-  });
-});
 </script>
 </body>
 </html>
