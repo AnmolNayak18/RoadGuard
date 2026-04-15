@@ -682,7 +682,7 @@ footer p { color: var(--muted); font-size: 13px; }
   </h1>
 
   <p class="hero-sub">
-    Upload a road video, let AI detect every pothole in milliseconds, earn points, and help build safer cities — together.
+    Upload a pothole photo, run severity AI in seconds, pin it on the city map, and earn leaderboard points for safer roads.
   </p>
 
   <div class="hero-actions">
@@ -717,24 +717,33 @@ footer p { color: var(--muted); font-size: 13px; }
 <section id="upload" style="padding-top:60px">
   <div class="reveal" style="max-width:680px;margin:0 auto;text-align:center">
     <div class="section-label">Try it now</div>
-    <div class="section-title">Upload a Road Video</div>
-    <p class="section-sub" style="margin:0 auto 36px">Drop a dashcam or phone video and watch AI detect potholes frame by frame.</p>
+    <div class="section-title">Upload a Pothole Photo</div>
+    <p class="section-sub" style="margin:0 auto 36px">Submit a pothole image + location, sync it to Drive, and run severity color prediction with your ML workflow.</p>
 
     <div id="dropZone" style="
       border:2px dashed rgba(240,165,0,0.35);border-radius:20px;
       padding:52px 32px;background:var(--bg2);cursor:pointer;
       transition:all .2s;position:relative;
     ">
-      <input type="file" id="fileInput" accept="video/*,image/*" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+      <input type="file" id="fileInput" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
       <div id="dropContent">
-        <div style="font-size:48px;margin-bottom:12px">🎥</div>
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:600;margin-bottom:8px">Drag & drop media files here</div>
-        <div style="color:var(--muted);font-size:14px;margin-bottom:20px">JPG, PNG, MP4, MOV, AVI — up to 200MB</div>
+        <div style="font-size:48px;margin-bottom:12px">📷</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:600;margin-bottom:8px">Drag & drop pothole photo here</div>
+        <div style="color:var(--muted);font-size:14px;margin-bottom:20px">JPG, PNG, WEBP — up to 20MB</div>
         <button class="btn-primary" style="pointer-events:none">Browse File</button>
       </div>
     </div>
+    <div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:left">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Pothole location (required)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px">
+        <input id="locationLat" type="number" step="any" placeholder="Latitude (e.g., 20.2961)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-size:13px">
+        <input id="locationLng" type="number" step="any" placeholder="Longitude (e.g., 85.8245)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-size:13px">
+        <button id="useCurrentLocationBtn" type="button" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:0 14px;border-radius:10px;font-size:13px;cursor:pointer">Use my GPS</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px" id="locationHint">Add coordinates so your upload can be pinned on the live map.</div>
+    </div>
     <div id="uploadedFilesPanel" style="margin-top:16px;text-align:left;display:none">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Uploaded files (open/download):</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Uploaded photos (Drive sync preview):</div>
       <div id="uploadedFilesList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
@@ -771,8 +780,11 @@ footer p { color: var(--muted); font-size: 13px; }
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <div id="res-pts" style="background:var(--amber-dim);border:1px solid rgba(240,165,0,0.3);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--amber);font-weight:600"></div>
           <div id="res-health" style="background:var(--faint);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--muted)"></div>
+          <div id="res-color" style="background:var(--faint);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--muted)"></div>
+          <div id="res-location" style="background:var(--faint);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--muted)"></div>
+          <div id="res-drive" style="background:var(--faint);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--muted)"></div>
         </div>
-        <button onclick="resetUpload()" style="margin-top:18px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:24px;font-size:13px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--amber)';this.style.color='var(--amber)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Upload another video</button>
+        <button onclick="resetUpload()" style="margin-top:18px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:24px;font-size:13px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--amber)';this.style.color='var(--amber)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Upload another photo</button>
       </div>
     </div>
   </div>
@@ -787,27 +799,27 @@ footer p { color: var(--muted); font-size: 13px; }
   <div class="how-grid reveal">
     <div class="how-card">
       <div class="how-num">01</div>
-      <div class="how-icon">🎥</div>
-      <div class="how-title">Record or upload</div>
-      <div class="how-desc">Drive normally. Record a 10–30 second clip of any road, or upload from your gallery. GPS coordinates are captured automatically.</div>
+      <div class="how-icon">📷</div>
+      <div class="how-title">Capture and upload</div>
+      <div class="how-desc">Take a pothole photo and add a precise location. Each upload is synced to Drive so your ML pipeline can reuse the evidence image.</div>
     </div>
     <div class="how-card">
       <div class="how-num">02</div>
       <div class="how-icon">⚡</div>
-      <div class="how-title">AI analyzes frames</div>
-      <div class="how-desc">YOLOv8 processes every frame, drawing precise bounding boxes around potholes with confidence scores in real time.</div>
+      <div class="how-title">AI analyzes photo</div>
+      <div class="how-desc">Your neural network analyzes the uploaded image and predicts a severity class mapped to a color (green, amber, or red).</div>
     </div>
     <div class="how-card">
       <div class="how-num">03</div>
       <div class="how-icon">📍</div>
       <div class="how-title">Pin to the map</div>
-      <div class="how-desc">Detected potholes are geotagged and added to the live crowdsourced map. Severity is auto-classified: minor, moderate, or severe.</div>
+      <div class="how-desc">Detected potholes are geotagged and pinned on the live map with predicted severity color and photo metadata.</div>
     </div>
     <div class="how-card">
       <div class="how-num">04</div>
       <div class="how-icon">🏆</div>
       <div class="how-title">Earn points</div>
-      <div class="how-desc">Get 10 points per pothole detected. Climb the leaderboard, unlock badges, and build your city's road health score.</div>
+      <div class="how-desc">When logged in, your name + email are linked to each report and points update instantly on the live leaderboard.</div>
     </div>
   </div>
 </section>
@@ -931,7 +943,7 @@ footer p { color: var(--muted); font-size: 13px; }
     <div>
       <div class="section-label">Crowdsourced map</div>
       <div class="section-title">Every pothole,<br>on one map</div>
-      <div class="section-sub">Real-time pins from contributors across the city. Tap any pin to see the original video frame, date, reporter, and severity.</div>
+      <div class="section-sub">Real-time pins from contributors across the city. Tap any pin to see the uploaded photo report, reporter, and predicted severity color.</div>
       <div class="feature-list">
         <div class="feature-item">
           <div class="feature-icon-wrap" style="background:rgba(29,170,117,0.12)">🟢</div>
@@ -968,53 +980,7 @@ footer p { color: var(--muted); font-size: 13px; }
     <div class="section-title">Top Contributors</div>
     <p class="section-sub" style="margin:0 auto">Gamified reporting keeps the community active. Earn points, climb ranks, unlock badges for every milestone.</p>
   </div>
-  <div class="lb-wrap reveal">
-    <div class="lb-row-demo gold">
-      <div class="lb-rank-demo" style="color:#f0a500">1</div>
-      <div class="lb-av-demo" style="background:rgba(240,165,0,0.15);color:#f0a500">RV</div>
-      <div>
-        <div class="lb-name-demo">Rahul Verma <span class="badge-demo">🚧 Road Guardian</span></div>
-        <div class="lb-city-demo">Bhubaneswar · 62 uploads</div>
-      </div>
-      <div class="lb-pts-demo">540 pts</div>
-    </div>
-    <div class="lb-row-demo">
-      <div class="lb-rank-demo" style="color:var(--muted)">2</div>
-      <div class="lb-av-demo" style="background:rgba(29,170,117,0.12);color:#1daa75">AK</div>
-      <div>
-        <div class="lb-name-demo">Anmol Kumar <span class="badge-demo">🗺 City Contributor</span></div>
-        <div class="lb-city-demo">Bhubaneswar · 48 uploads</div>
-      </div>
-      <div class="lb-pts-demo">480 pts</div>
-    </div>
-    <div class="lb-row-demo">
-      <div class="lb-rank-demo" style="color:var(--muted)">3</div>
-      <div class="lb-av-demo" style="background:rgba(178,97,232,0.12);color:#b261e8">SN</div>
-      <div>
-        <div class="lb-name-demo">Sneha Nair</div>
-        <div class="lb-city-demo">Bhubaneswar · 41 uploads</div>
-      </div>
-      <div class="lb-pts-demo">420 pts</div>
-    </div>
-    <div class="lb-row-demo">
-      <div class="lb-rank-demo" style="color:var(--muted)">4</div>
-      <div class="lb-av-demo" style="background:rgba(52,152,219,0.12);color:#3498db">PR</div>
-      <div>
-        <div class="lb-name-demo">Priya Rao</div>
-        <div class="lb-city-demo">Cuttack · 35 uploads</div>
-      </div>
-      <div class="lb-pts-demo">390 pts</div>
-    </div>
-    <div class="lb-row-demo">
-      <div class="lb-rank-demo" style="color:var(--muted)">5</div>
-      <div class="lb-av-demo" style="background:rgba(231,76,60,0.12);color:#e74c3c">MK</div>
-      <div>
-        <div class="lb-name-demo">Mohit Kumar</div>
-        <div class="lb-city-demo">Bhubaneswar · 30 uploads</div>
-      </div>
-      <div class="lb-pts-demo">355 pts</div>
-    </div>
-  </div>
+  <div class="lb-wrap reveal" id="leaderboardRows"></div>
 </section>
 
 <!-- TECH STACK -->
@@ -1080,9 +1046,52 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
   });
 });
 
-/* ── AUTH STATE ── */
+/* ── APP STATE ── */
 let currentUser = null;
+let currentUploadContext = null;
+let roadMap = null;
+let roadMapInfoWindow = null;
+const leaderboardData = [
+  { name: 'Rahul Verma', email: 'rahul@roadguard.app', points: 540, uploads: 62, badge: '🚧 Road Guardian', tone: '#f0a500' },
+  { name: 'Anmol Kumar', email: 'anmol@roadguard.app', points: 480, uploads: 48, badge: '🗺 City Contributor', tone: '#1daa75' },
+  { name: 'Sneha Nair', email: 'sneha@roadguard.app', points: 420, uploads: 41, badge: '', tone: '#b261e8' },
+  { name: 'Priya Rao', email: 'priya@roadguard.app', points: 390, uploads: 35, badge: '', tone: '#3498db' },
+  { name: 'Mohit Kumar', email: 'mohit@roadguard.app', points: 355, uploads: 30, badge: '', tone: '#e74c3c' }
+];
+const seedPins = [
+  { lat: 20.3044, lng: 85.8266, severity: 'Severe', color: '#e24b4a', reporter: 'Community report' },
+  { lat: 20.2895, lng: 85.8410, severity: 'Moderate', color: '#f0a500', reporter: 'Community report' },
+  { lat: 20.2781, lng: 85.8147, severity: 'Minor', color: '#1daa75', reporter: 'Community report' }
+];
 
+function initialsFor(name) {
+  return (name || 'RG').split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('');
+}
+
+function renderLeaderboard() {
+  const rows = document.getElementById('leaderboardRows');
+  const sorted = [...leaderboardData].sort((a, b) => b.points - a.points).slice(0, 10);
+  rows.innerHTML = '';
+  sorted.forEach((entry, idx) => {
+    const isTop = idx === 0;
+    const isCurrent = !!currentUser && currentUser.email === entry.email;
+    const row = document.createElement('div');
+    row.className = `lb-row-demo ${isTop ? 'gold' : ''}`;
+    row.style.borderColor = isCurrent ? 'rgba(240,165,0,0.55)' : '';
+    row.innerHTML = `
+      <div class="lb-rank-demo" style="color:${isTop ? '#f0a500' : 'var(--muted)'}">${idx + 1}</div>
+      <div class="lb-av-demo" style="background:${isTop ? 'rgba(240,165,0,0.15)' : 'rgba(240,237,232,0.08)'};color:${entry.tone}">${initialsFor(entry.name)}</div>
+      <div>
+        <div class="lb-name-demo">${entry.name}${entry.badge ? ` <span class="badge-demo">${entry.badge}</span>` : ''}${isCurrent ? ' <span class="badge-demo">👤 You</span>' : ''}</div>
+        <div class="lb-city-demo">${entry.email} · ${entry.uploads} uploads</div>
+      </div>
+      <div class="lb-pts-demo">${entry.points} pts</div>
+    `;
+    rows.appendChild(row);
+  });
+}
+
+/* ── AUTH STATE ── */
 function updateNavState() {
   const pill = document.getElementById('navUserPill');
   const signin = document.getElementById('navSignin');
@@ -1146,12 +1155,8 @@ document.addEventListener('click', e => {
 
 /* ── GOOGLE SIGN-IN ── */
 function handleGoogleSignIn() {
-  // Initialize Google Identity Services
-  // Replace with your actual Client ID from Google Cloud Console
   const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-
   if (!CLIENT_ID || CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
-    // Demo mode: simulate successful Google sign-in
     simulateGoogleLogin();
     return;
   }
@@ -1164,28 +1169,25 @@ function handleGoogleSignIn() {
   google.accounts.id.prompt();
 }
 
-function handleGoogleCredential(response) {
-  // Decode JWT payload (in production, verify on your server)
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
-  currentUser = {
-    name: payload.name,
-    email: payload.email,
-    avatar: payload.picture,
-  };
+function setUser(name, email, avatar) {
+  currentUser = { name, email, avatar, points: 0, uploads: 0 };
   closeAuth();
   updateNavState();
-  showToast('Welcome, ' + currentUser.name.split(' ')[0] + '! 🛣️');
+  renderLeaderboard();
+}
+
+function handleGoogleCredential(response) {
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  setUser(payload.name, payload.email, payload.picture);
+  showToast('Welcome, ' + payload.name.split(' ')[0] + '! 🛣️');
 }
 
 function simulateGoogleLogin() {
-  // Demo fallback when no real Client ID is set
-  currentUser = {
-    name: 'Demo User',
-    email: 'demo@roadguard.app',
-    avatar: 'https://ui-avatars.com/api/?name=Demo+User&background=f0a500&color=0a0a0f&size=64',
-  };
-  closeAuth();
-  updateNavState();
+  setUser(
+    'Demo User',
+    'demo@roadguard.app',
+    'https://ui-avatars.com/api/?name=Demo+User&background=f0a500&color=0a0a0f&size=64'
+  );
   showToast('Welcome to RoadGuard! 🛣️');
 }
 
@@ -1194,15 +1196,9 @@ function handleEmailLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   if (!email || !password) { showToast('Please fill in all fields.', '⚠️'); return; }
-  // Demo: accept any credentials
   const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  currentUser = {
-    name,
-    email,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0a500&color=0a0a0f&size=64`,
-  };
-  closeAuth();
-  updateNavState();
+  const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0a500&color=0a0a0f&size=64`;
+  setUser(name, email, avatar);
   showToast('Welcome back, ' + name.split(' ')[0] + '!');
 }
 
@@ -1213,13 +1209,8 @@ function handleEmailSignup() {
   const password = document.getElementById('signupPassword').value;
   if (!name || !email || !password) { showToast('Please fill in all fields.', '⚠️'); return; }
   if (password.length < 6) { showToast('Password must be at least 6 characters.', '⚠️'); return; }
-  currentUser = {
-    name,
-    email,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0a500&color=0a0a0f&size=64`,
-  };
-  closeAuth();
-  updateNavState();
+  const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0a500&color=0a0a0f&size=64`;
+  setUser(name, email, avatar);
   showToast('Account created! Welcome, ' + name.split(' ')[0] + '! 🎉');
 }
 
@@ -1227,11 +1218,9 @@ function handleEmailSignup() {
 function handleSignOut() {
   currentUser = null;
   updateNavState();
+  renderLeaderboard();
   showToast('Signed out successfully.', '👋');
 }
-
-// Init nav state on load
-updateNavState();
 
 /* ── UPLOAD LOGIC ── */
 const dropZone = document.getElementById('dropZone');
@@ -1242,26 +1231,39 @@ dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.
 dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor='rgba(240,165,0,0.35)'; dropZone.style.background='var(--bg2)'; });
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
-  const files = Array.from(e.dataTransfer.files || []);
-  handleIncomingFiles(files);
+  handleIncomingFiles(Array.from(e.dataTransfer.files || []));
 });
 fileInput.addEventListener('change', () => {
-  const files = Array.from(fileInput.files || []);
-  handleIncomingFiles(files);
+  handleIncomingFiles(Array.from(fileInput.files || []));
 });
 
 function isSupportedMedia(file) {
-  return file.type.startsWith('video/') || file.type.startsWith('image/');
+  return file.type.startsWith('image/');
+}
+
+function simulateDriveUpload(file) {
+  const stamp = Date.now();
+  return `https://drive.google.com/file/d/mock-${stamp}-${encodeURIComponent(file.name)}/view`;
 }
 
 function handleIncomingFiles(files) {
-  const supported = files.filter(isSupportedMedia);
-  if (!supported.length) {
-    showToast('Please upload an image or video file.', '⚠️');
+  const lat = Number(document.getElementById('locationLat').value);
+  const lng = Number(document.getElementById('locationLng').value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    showToast('Please enter pothole latitude and longitude first.', '⚠️');
     return;
   }
-  supported.forEach(registerUploadedFile);
-  startProcessing(supported[0]);
+
+  const supported = files.filter(isSupportedMedia);
+  if (!supported.length) {
+    showToast('Please upload an image file only.', '⚠️');
+    return;
+  }
+
+  const selected = supported[0];
+  registerUploadedFile(selected);
+  currentUploadContext = { lat, lng, driveLink: simulateDriveUpload(selected) };
+  startProcessing(selected);
 }
 
 function registerUploadedFile(file) {
@@ -1284,7 +1286,7 @@ function renderUploadedFiles() {
     const row = document.createElement('div');
     row.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px';
     row.innerHTML = `<div style="min-width:0"><div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div><div style="font-size:12px;color:var(--muted)">${Math.max(1, Math.round(f.size / 1024))} KB · ${f.type || 'unknown'}</div></div>
-      <a href="${f.url}" target="_blank" download="${f.name}" style="font-size:12px;color:var(--amber);text-decoration:none;border:1px solid rgba(240,165,0,0.35);border-radius:999px;padding:4px 10px;white-space:nowrap">Open / Download</a>`;
+      <a href="${f.url}" target="_blank" download="${f.name}" style="font-size:12px;color:var(--amber);text-decoration:none;border:1px solid rgba(240,165,0,0.35);border-radius:999px;padding:4px 10px;white-space:nowrap">Preview</a>`;
     list.appendChild(row);
   });
   panel.style.display = uploadedFiles.length ? 'block' : 'none';
@@ -1298,11 +1300,11 @@ function startProcessing(file) {
   document.getElementById('fileName').textContent = '📁 ' + file.name;
   const steps = [
     [10, 'Loading YOLOv8 model…'],
-    [28, 'Extracting video frames…'],
-    [50, 'Running inference on frames…'],
-    [72, 'Classifying pothole severity…'],
-    [88, 'Geotagging detections…'],
-    [100, 'Finalizing report…']
+    [30, 'Uploading photo to Drive…'],
+    [52, 'Running neural network inference…'],
+    [75, 'Predicting severity color…'],
+    [92, 'Pinning pothole to Google Map…'],
+    [100, 'Updating leaderboard points…']
   ];
   let i = 0;
   const bar = document.getElementById('progressBar');
@@ -1314,23 +1316,65 @@ function startProcessing(file) {
     pct.textContent = steps[i][0]+'%';
     lbl.textContent = steps[i][1];
     i++;
-  }, 700);
+  }, 650);
+}
+
+function upsertCurrentUserPoints(earnedPoints) {
+  if (!currentUser) return;
+  currentUser.points += earnedPoints;
+  currentUser.uploads += 1;
+  const existing = leaderboardData.find(entry => entry.email === currentUser.email);
+  if (existing) {
+    existing.name = currentUser.name;
+    existing.points += earnedPoints;
+    existing.uploads += 1;
+  } else {
+    leaderboardData.push({
+      name: currentUser.name,
+      email: currentUser.email,
+      points: currentUser.points,
+      uploads: currentUser.uploads,
+      badge: '🆕 New Reporter',
+      tone: '#f0a500'
+    });
+  }
+  renderLeaderboard();
 }
 
 function showResults() {
   document.getElementById('processingState').style.display='none';
   document.getElementById('resultsState').style.display='block';
+
   const severe = Math.floor(Math.random()*4)+1;
   const moderate = Math.floor(Math.random()*5)+2;
   const minor = Math.floor(Math.random()*6)+2;
   const total = severe+moderate+minor;
   const pts = total*10;
   const health = Math.max(20, 100 - severe*15 - moderate*7 - minor*3);
+
+  const dominant = severe >= moderate && severe >= minor
+    ? { label: 'Severe', colorName: 'Red', colorHex: '#e24b4a' }
+    : moderate >= minor
+      ? { label: 'Moderate', colorName: 'Amber', colorHex: '#f0a500' }
+      : { label: 'Minor', colorName: 'Green', colorHex: '#1daa75' };
+
   document.getElementById('res-severe').textContent=severe;
   document.getElementById('res-moderate').textContent=moderate;
   document.getElementById('res-minor').textContent=minor;
   document.getElementById('res-pts').textContent='🏆 +'+pts+' points earned';
   document.getElementById('res-health').textContent='Road health score: '+health+'/100';
+  document.getElementById('res-color').innerHTML=`Predicted color: <strong style="color:${dominant.colorHex}">${dominant.colorName}</strong> (${dominant.label})`;
+  document.getElementById('res-location').textContent=`📍 Location: ${currentUploadContext.lat.toFixed(5)}, ${currentUploadContext.lng.toFixed(5)}`;
+  document.getElementById('res-drive').innerHTML=`☁️ Drive sync: <a href="${currentUploadContext.driveLink}" target="_blank" style="color:var(--amber)">Open uploaded photo</a>`;
+
+  addPotholePin({
+    lat: currentUploadContext.lat,
+    lng: currentUploadContext.lng,
+    severity: dominant.label,
+    color: dominant.colorHex,
+    reporter: currentUser ? `${currentUser.name} (${currentUser.email})` : 'Guest user'
+  });
+  upsertCurrentUserPoints(pts);
 }
 
 function resetUpload() {
@@ -1340,9 +1384,33 @@ function resetUpload() {
   document.getElementById('processingState').style.display='none';
   document.getElementById('resultsState').style.display='none';
   fileInput.value='';
+  currentUploadContext = null;
 }
 
 /* ── GOOGLE MAP ── */
+function addPotholePin(pin) {
+  if (!window.google || !window.google.maps || !roadMap) return;
+
+  const marker = new google.maps.Marker({
+    position: { lat: pin.lat, lng: pin.lng },
+    map: roadMap,
+    title: `${pin.severity} pothole`,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 7,
+      fillColor: pin.color,
+      fillOpacity: 1,
+      strokeColor: '#0a0a0f',
+      strokeWeight: 2
+    }
+  });
+
+  marker.addListener('click', () => {
+    roadMapInfoWindow.setContent(`<strong>${pin.severity} pothole</strong><br/>Reporter: ${pin.reporter}`);
+    roadMapInfoWindow.open({ anchor: marker, map: roadMap });
+  });
+}
+
 function initRoadMap() {
   const mapContainer = document.getElementById('roadMap');
   const fallback = document.getElementById('mapFallback');
@@ -1352,8 +1420,8 @@ function initRoadMap() {
     return;
   }
 
-  const center = { lat: 20.2961, lng: 85.8245 }; // Bhubaneswar
-  const map = new google.maps.Map(mapContainer, {
+  const center = { lat: 20.2961, lng: 85.8245 };
+  roadMap = new google.maps.Map(mapContainer, {
     center,
     zoom: 13,
     mapTypeControl: false,
@@ -1361,34 +1429,32 @@ function initRoadMap() {
     fullscreenControl: false
   });
 
-  const potholePins = [
-    { lat: 20.3044, lng: 85.8266, severity: 'Severe', color: '#e24b4a' },
-    { lat: 20.2895, lng: 85.8410, severity: 'Moderate', color: '#f0a500' },
-    { lat: 20.2781, lng: 85.8147, severity: 'Minor', color: '#1daa75' }
-  ];
-
-  potholePins.forEach(pin => {
-    const marker = new google.maps.Marker({
-      position: { lat: pin.lat, lng: pin.lng },
-      map,
-      title: `${pin.severity} pothole`,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 7,
-        fillColor: pin.color,
-        fillOpacity: 1,
-        strokeColor: '#0a0a0f',
-        strokeWeight: 2
-      }
-    });
-    const infoWindow = new google.maps.InfoWindow({
-      content: `<strong>${pin.severity} pothole</strong><br/>Crowdsourced report`
-    });
-    marker.addListener('click', () => infoWindow.open({ anchor: marker, map }));
-  });
+  roadMapInfoWindow = new google.maps.InfoWindow();
+  seedPins.forEach(addPotholePin);
 }
 
 window.initRoadMap = initRoadMap;
+
+document.getElementById('useCurrentLocationBtn').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    showToast('Geolocation is not supported in this browser.', '⚠️');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition((position) => {
+    const lat = position.coords.latitude.toFixed(6);
+    const lng = position.coords.longitude.toFixed(6);
+    document.getElementById('locationLat').value = lat;
+    document.getElementById('locationLng').value = lng;
+    document.getElementById('locationHint').textContent = 'Current location fetched. You can upload now.';
+    showToast('Location captured successfully.', '📍');
+  }, () => {
+    showToast('Unable to fetch location. Enter coordinates manually.', '⚠️');
+  });
+});
+
+// Init state on load
+updateNavState();
+renderLeaderboard();
 </script>
 </body>
 </html>
